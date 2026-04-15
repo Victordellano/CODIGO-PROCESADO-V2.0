@@ -1,5 +1,5 @@
-import audio_io
-import dsp_core
+import V2_audio_io
+import V2_dsp_core
 import visualizer
 
 # =============PARAMETROS GLOBALES =============
@@ -24,14 +24,14 @@ def analizar_microfono_individual(nombre_micro, archivo_audio, referencia, fs, c
     print(f"  -> Analizando: {nombre_micro}...")
     
     # Lectura del output wav de Odeon
-    _, micro_medicion = audio_io.wav_to_code(archivo_audio)
+    _, micro_medicion = V2_audio_io.wav_to_code(archivo_audio)
     
     # Calculo de funcion de transferencia y coherencia
-    frec, mag, fase, coh = dsp_core.funcion_transferencia(referencia, micro_medicion, fs)
-    fc, mag_1_3, _, coh_1_3 = dsp_core.to_1_3_oct(frec, mag, fase, coh)
+    frec, mag, fase, coh = V2_dsp_core.funcion_transferencia(referencia, micro_medicion, fs)
+    fc, mag_1_3, _, coh_1_3 = V2_dsp_core.to_1_3_oct(frec, mag, fase, coh)
     
     # 3. Calculo de la correccion EQ respecto a la curva objetivo
-    correccion = dsp_core.algoritmo_correccion_eq(mag_medida=mag_1_3, coh_medida=coh_1_3, mag_objetivo=curva_objetivo, umbral_coh=0.7, max_cut=-12.0, max_boost=6.0)
+    correccion = V2_dsp_core.algoritmo_correccion_eq(mag_medida=mag_1_3, coh_medida=coh_1_3, mag_objetivo=curva_objetivo, umbral_coh=0.7, max_cut=-12.0, max_boost=6.0)
     
     visualizer.dibujar_analisis_completo(fc, mag_1_3, coh_1_3, correccion, curva_objetivo, titulo=nombre_micro)
     
@@ -44,17 +44,17 @@ def ciclo_principal():
     print("\n=== INICIANDO CICLO DE ANÁLISIS ===")
     
     # Lectura del audio de referencia (mesa FOH)
-    fs, referencia = audio_io.wav_to_code("referencia_radiohead.wav")
+    fs, referencia = V2_audio_io.wav_to_code("referencia_radiohead.wav")
     
     # Captura de la curva objetivo (FOH) o uso de la guardada en memoria
     if solicitar_captura_foh or curva_objetivo_guardada is None:
 
         print("Capturando curva objetivo desde el FOH...")
 
-        _, micro_foh = audio_io.wav_to_code("micro_FOH.wav")
+        _, micro_foh = V2_audio_io.wav_to_code("micro_FOH.wav")
 
-        frec_foh, mag_foh, fase_foh, coh_foh = dsp_core.funcion_transferencia(referencia, micro_foh, fs)
-        _, mag_foh_1_3, _, _ = dsp_core.to_1_3_oct(frec_foh, mag_foh, fase_foh, coh_foh)
+        frec_foh, mag_foh, fase_foh, coh_foh = V2_dsp_core.funcion_transferencia(referencia, micro_foh, fs)
+        _, mag_foh_1_3, _, _ = V2_dsp_core.to_1_3_oct(frec_foh, mag_foh, fase_foh, coh_foh)
 
         curva_objetivo_guardada = mag_foh_1_3
         solicitar_captura_foh = False
