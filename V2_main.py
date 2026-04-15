@@ -1,6 +1,6 @@
 import V2_audio_io
 import V2_dsp_core
-import visualizer
+import V2_visualizer
 
 # =============PARAMETROS GLOBALES =============
 
@@ -14,9 +14,9 @@ max_boost = 6.0
 
 # Listado de microfonos
 lista_micros_sala = {
-    "Micro 1 (Seccion oeste)": "micro_medicion_1.wav",
-    "Micro 2 (Seccion norte)": "micro_medicion_2.wav",
-    "Micro 3 (Seccion este)": "micro_medicion_3.wav"
+    "Micro 1 (Seccion oeste)": "V2_micro_medicion_1.wav",
+    "Micro 2 (Seccion norte)": "V2_micro_medicion_2.wav",
+    "Micro 3 (Seccion este)": "V2_micro_medicion_3.wav"
 }
 
 def analizar_microfono_individual(nombre_micro, archivo_audio, referencia, fs, curva_objetivo):
@@ -33,7 +33,7 @@ def analizar_microfono_individual(nombre_micro, archivo_audio, referencia, fs, c
     # 3. Calculo de la correccion EQ respecto a la curva objetivo
     correccion = V2_dsp_core.algoritmo_correccion_eq(mag_medida=mag_1_3, coh_medida=coh_1_3, mag_objetivo=curva_objetivo, umbral_coh=0.7, max_cut=-12.0, max_boost=6.0)
     
-    visualizer.dibujar_analisis_completo(fc, mag_1_3, coh_1_3, correccion, curva_objetivo, titulo=nombre_micro)
+    V2_visualizer.dibujar_analisis_completo(fc, mag_1_3, coh_1_3, correccion, curva_objetivo, titulo=nombre_micro)
     
     return correccion
 
@@ -51,7 +51,7 @@ def ciclo_principal():
 
         print("Capturando curva objetivo desde el FOH...")
 
-        _, micro_foh = V2_audio_io.wav_to_code("micro_FOH.wav")
+        _, micro_foh = V2_audio_io.wav_to_code("V2_micro_FOH.wav")
 
         frec_foh, mag_foh, fase_foh, coh_foh = V2_dsp_core.funcion_transferencia(referencia, micro_foh, fs)
         _, mag_foh_1_3, _, _ = V2_dsp_core.to_1_3_oct(frec_foh, mag_foh, fase_foh, coh_foh)
