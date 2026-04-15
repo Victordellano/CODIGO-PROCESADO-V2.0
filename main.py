@@ -76,4 +76,4 @@ if __name__ == "__main__":
 
     correcciones_del_recinto = ciclo_principal()
 
-    correcciones_del_recinto
+    print(correcciones_del_recinto)
