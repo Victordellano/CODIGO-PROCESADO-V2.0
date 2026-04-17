@@ -2,6 +2,8 @@ import V2_audio_io
 import V2_dsp_core
 import V2_visualizer
 
+import numpy as np
+import pandas as pd
 # =============PARAMETROS GLOBALES =============
 
 #curva_objetivo_guardada = None 
@@ -76,4 +78,14 @@ if __name__ == "__main__":
 
     correcciones_del_recinto = ciclo_principal()
 
-    print(correcciones_del_recinto)
+    dfs = []
+    for nombre_micro in correcciones_del_recinto.keys():
+        correccion = correcciones_del_recinto[nombre_micro]
+        print(f"\nCorrecciones para {nombre_micro}:")
+        for banda, ajuste in zip(V2_dsp_core.FC, correccion):
+            print(f"  Banda {banda} Hz: {ajuste:.2f} dB")
+        correcciones_del_recinto[nombre_micro] = correccion.tolist()
+    
+    pd.DataFrame(correcciones_del_recinto).set_index(np.asarray(V2_dsp_core.FC, dtype=np.int16)).to_csv("correcciones_calculadas.csv", float_format="%.2f", index_label="Frecuencia (Hz)")
+
+    
