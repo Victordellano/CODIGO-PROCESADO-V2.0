@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 # =============PARAMETROS GLOBALES =============
 
-#curva_objetivo_guardada = None 
-solicitar_captura_foh = True  
-umbral_coh = 0.7
-max_cut = -12.0
-max_boost = 6.0
+curva_objetivo_guardada = None
+SOLICITAR_CAPTURA_FOH = True  
+UMBRAL_COH = 0.7
+MAX_CUT = -1.0
+MAX_BOOST = 1.0
 
 # ==============================================
 
@@ -33,7 +33,7 @@ def analizar_microfono_individual(nombre_micro, archivo_audio, referencia, fs, c
     fc, mag_1_3, _, coh_1_3 = V2_dsp_core.to_1_3_oct(frec, mag, fase, coh)
     
     # 3. Calculo de la correccion EQ respecto a la curva objetivo
-    correccion = V2_dsp_core.algoritmo_correccion_eq(mag_medida=mag_1_3, coh_medida=coh_1_3, mag_objetivo=curva_objetivo, umbral_coh=0.7, max_cut=-12.0, max_boost=6.0)
+    correccion = V2_dsp_core.algoritmo_correccion_eq(mag_medida=mag_1_3, coh_medida=coh_1_3, mag_objetivo=curva_objetivo, umbral_coh=UMBRAL_COH, max_cut=MAX_CUT, max_boost=MAX_BOOST)
     
     V2_visualizer.dibujar_analisis_completo(fc, mag_1_3, coh_1_3, correccion, curva_objetivo, titulo=nombre_micro)
     
@@ -41,7 +41,7 @@ def analizar_microfono_individual(nombre_micro, archivo_audio, referencia, fs, c
 
 def ciclo_principal():
 
-    global curva_objetivo_guardada, solicitar_captura_foh
+    global curva_objetivo_guardada, SOLICITAR_CAPTURA_FOH
     
     print("\n=== INICIANDO CICLO DE ANÁLISIS ===")
     
@@ -49,7 +49,7 @@ def ciclo_principal():
     fs, referencia = V2_audio_io.wav_to_code("referencia_radiohead.wav")
     
     # Captura de la curva objetivo (FOH) o uso de la guardada en memoria
-    if solicitar_captura_foh or curva_objetivo_guardada is None:
+    if SOLICITAR_CAPTURA_FOH or curva_objetivo_guardada is None:
 
         print("Capturando curva objetivo desde el FOH...")
 
@@ -59,7 +59,7 @@ def ciclo_principal():
         _, mag_foh_1_3, _, _ = V2_dsp_core.to_1_3_oct(frec_foh, mag_foh, fase_foh, coh_foh)
 
         curva_objetivo_guardada = mag_foh_1_3
-        solicitar_captura_foh = False
+        SOLICITAR_CAPTURA_FOH = False
     else:
         print("Usando curva objetivo en memoria.")
 
@@ -76,16 +76,18 @@ def ciclo_principal():
 
 if __name__ == "__main__":
 
-    correcciones_del_recinto = ciclo_principal()
+    while True:
+        correcciones_del_recinto = ciclo_principal()
 
-    dfs = []
-    for nombre_micro in correcciones_del_recinto.keys():
-        correccion = correcciones_del_recinto[nombre_micro]
-        print(f"\nCorrecciones para {nombre_micro}:")
-        for banda, ajuste in zip(V2_dsp_core.FC, correccion):
-            print(f"  Banda {banda} Hz: {ajuste:.2f} dB")
-        correcciones_del_recinto[nombre_micro] = correccion.tolist()
-    
-    pd.DataFrame(correcciones_del_recinto).set_index(np.asarray(V2_dsp_core.FC, dtype=np.int16)).to_csv("correcciones_calculadas.csv", float_format="%.2f", index_label="Frecuencia (Hz)")
+        for nombre_micro in correcciones_del_recinto.keys():
+            correccion = correcciones_del_recinto[nombre_micro]
+            print(f"\nCorrecciones para {nombre_micro}:")
+            for banda, ajuste in zip(V2_dsp_core.FC, correccion):
+                print(f"  Banda {banda} Hz: {ajuste:.2f} dB")
+            correcciones_del_recinto[nombre_micro] = correccion.tolist()
+        
+        pd.DataFrame(correcciones_del_recinto).set_index(np.asarray(V2_dsp_core.FC, dtype=np.int16)).to_csv("correcciones_calculadas.csv", float_format="%.2f", index_label="Frecuencia (Hz)")
+
+        input("\nPresiona Enter para repetir el ciclo de análisis...")
 
     
