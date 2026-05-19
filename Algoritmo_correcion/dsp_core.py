@@ -5,7 +5,7 @@ FC = np.array([20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315,
                    400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 
                    4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000])
 
-def funcion_transferencia(ref_signal, mic_signal, sample_rate, ventana_fft=4096):
+def funcion_transferencia(ref_signal, mic_signal, sample_rate, ventana_fft=65536):
     """
     Calcula la Función de Transferencia H(f) y la Coherencia entre una señal 
     de referencia (mesa) y una de medición (micrófono).
@@ -147,5 +147,51 @@ def algoritmo_correccion_eq(mag_medida, coh_medida, mag_objetivo=None, umbral_co
     
     return correccion_final
 
+def convolucionar_ir(senal, respuesta_impulso):
+    """
+    Convoluciona una señal fuente con la Respuesta al Impulso (IR) de la sala.
+    Ambas señales deben tener la misma frecuencia de muestreo.
+    """
+    # fftconvolve es el estándar de la industria para señales de audio largas
+    senal_convolucionada = signal.fftconvolve(senal, respuesta_impulso, mode='full')
+    
+    # Es vital normalizar el resultado para evitar saturación (clipping)
+    # al guardarlo o analizarlo
+    pico_maximo = np.max(np.abs(senal_convolucionada))
+    if pico_maximo > 0:
+        senal_convolucionada = senal_convolucionada / pico_maximo
+        
+    return senal_convolucionada.astype(np.float32)
+
+def alinear_senales(ref, med):
+    """
+    Encuentra el retraso entre la medición y la referencia usando 
+    correlación cruzada y recorta las señales para que estén 
+    perfectamente alineadas en el tiempo y tengan la misma longitud.
+    """
+    # 1. Encontrar el retraso mediante correlación cruzada (por FFT por velocidad)
+    correlacion = signal.correlate(med, ref, mode='full', method='fft')
+    
+    # El pico máximo de la correlación indica el retraso en muestras
+    delay_muestras = np.argmax(np.abs(correlacion)) - (len(ref) - 1)
+    
+    if delay_muestras > 0:
+        # La medición llega tarde (lo normal, el sonido tarda en viajar)
+        med_alineada = med[delay_muestras:]
+        ref_alineada = ref[:len(med_alineada)]
+    elif delay_muestras < 0:
+        # La referencia va por detrás (raro, pero cubre errores de ruteo)
+        delay_abs = abs(delay_muestras)
+        ref_alineada = ref[delay_abs:]
+        med_alineada = med[:len(ref_alineada)]
+    else:
+        # Ya estaban alineadas
+        ref_alineada = ref
+        med_alineada = med
+        
+    # 2. Igualar las longitudes exactas cortando la "cola" sobrante
+    min_len = min(len(ref_alineada), len(med_alineada))
+    
+    return ref_alineada[:min_len], med_alineada[:min_len]
 
 

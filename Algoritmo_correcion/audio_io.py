@@ -27,33 +27,36 @@ def wav_to_code(ruta_archivo):
     # Paso a float32 para que ocupe la mitad de memoria RAM que el float64
     return sample_rate, data.astype(np.float32)
 
-def generador_ruido_rosa(longitud):
+def generador_ruido_rosa(duracion=10.0, fs=44100):
     """
     Genera ruido rosa aplicando un filtro de 1/sqrt(f) a ruido blanco puro
     en el dominio de la frecuencia.
     """
-    # Genera ruido blanco
+    # 1. Calculamos la longitud total en muestras (DEBE ser un número entero)
+    longitud = int(duracion * fs)
+    
+    # 2. Genera ruido blanco
     ruido_blanco = np.random.randn(longitud)
     
-    # Paso al dominio de la frecuencia (FFT real)
+    # 3. Paso al dominio de la frecuencia (FFT real)
     X = np.fft.rfft(ruido_blanco)
     
-    # Vector de frecuencias
+    # 4. Vector de frecuencias
     frecuencias = np.fft.rfftfreq(longitud)
     frecuencias[0] = 1.0  # Evita la división por cero en la componente continua (DC)
     
-    # Aplica el filtro: la amplitud cae proporcionalmente a 1/sqrt(f)
+    # 5. Aplica el filtro: la amplitud cae proporcionalmente a 1/sqrt(f)
     X_rosa = X / np.sqrt(frecuencias)
     
-    # Vuelta al dominio del tiempo
+    # 6. Vuelta al dominio del tiempo
     ruido_rosa = np.fft.irfft(X_rosa, n=longitud)
     
-    # Normalizacion por pico absoluto (como con la referencia)
+    # 7. Normalizacion por pico absoluto (como con la referencia)
     pico_ruido = np.max(np.abs(ruido_rosa))
     if pico_ruido > 0:
         ruido_rosa = ruido_rosa / pico_ruido
         
-    return ruido_rosa
+    return ruido_rosa.astype(np.float32)
 
 def simulador_audio_sala(audio_referencia, sample_rate, eq_curva_db, nivel_ruido=0.0, tipo_ruido="rosa", archivo_ruido=None):
     """
@@ -123,3 +126,26 @@ def simulador_audio_sala(audio_referencia, sample_rate, eq_curva_db, nivel_ruido
         audio_filtrado += ruido_base * nivel_ruido
 
         return sample_rate, audio_filtrado.astype(np.float32)
+    
+def generar_barrido_logaritmico(duracion=10.0, fs=44100, f0=20.0, f1=20000.0):
+    """
+    Genera un barrido de tonos (sine sweep) logarítmico de 20Hz a 20kHz.
+    
+    Parámetros:
+        duracion: Segundos que dura el barrido.
+        fs: Frecuencia de muestreo.
+        f0: Frecuencia inicial (Hz).
+        f1: Frecuencia final (Hz).
+    """
+    # Creamos el vector de tiempo
+    t = np.linspace(0, duracion, int(fs * duracion), endpoint=False)
+    
+    # Usamos la función chirp de scipy para el barrido logarítmico
+    sweep = signal.chirp(t, f0=f0, f1=f1, t1=duracion, method='logarithmic')
+    
+    # ¡TRUCO PRO! Aplicar un fundido de entrada/salida (Tukey window)
+    # Esto evita "clicks" bruscos al inicio y al final de la onda que estropearían la FFT
+    ventana = signal.windows.tukey(len(sweep), alpha=0.01)
+    sweep_limpio = sweep * ventana
+
+    wavfile.write("barrido_logaritmico.wav", fs, sweep_limpio.astype(np.float32))  # Guardamos el barrido para futuras pruebas

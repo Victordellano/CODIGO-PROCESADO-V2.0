@@ -44,7 +44,7 @@ def dibujar_analisis_completo(fc, mag_medida, coh_medida, correccion, mag_objeti
     ax2.set_title(f'2. Comparativa de Magnitudes: {titulo} vs Objetivo')
     ax2.set_ylabel('Magnitud (dB)')
     ax2.set_xlim([20, 20000])
-    ax2.set_ylim([-15, 15])
+    ax2.autoscale(enable=True, axis='y')
     ax2.set_xticks(fc)
     ax2.set_xticklabels(etiquetas_x, rotation=45, ha='right', fontsize=8)
     ax2.grid(True, which='major', linestyle='--', alpha=0.5)
